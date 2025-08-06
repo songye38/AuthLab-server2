@@ -11,10 +11,6 @@ from app.db.database import Base,engine
 import app.db.models as models
 
 
-Base.metadata.drop_all(bind=engine)
-Base.metadata.create_all(bind=engine)
-
-
 # User 모델 정의
 class User(Base):
     __tablename__ = "users"
