@@ -14,6 +14,7 @@ class UserCreate(BaseModel):
 class UserOut(BaseModel):
     id: int
     email: EmailStr
+    name: str
 
     model_config = {
         "from_attributes": True
@@ -26,6 +27,7 @@ class UserLogin(BaseModel):
 class TokenOut(BaseModel):
     access_token: str
     token_type: str
+    user: UserOut
 
 class PostCreate(BaseModel):
     title: str
