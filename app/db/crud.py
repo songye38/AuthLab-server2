@@ -17,9 +17,9 @@ def get_password_hash(password: str):
     return pwd_context.hash(password)
 
 # 사용자 생성 함수
-def create_user(db: Session, email: str, password: str):
+def create_user(db: Session, email: str, password: str,name: str):
     hashed_pw = get_password_hash(password) #비밀번호를 해시 함수에 넣어서 해시 값을 구함
-    db_user = User(email=email, hashed_password=hashed_pw) 
+    db_user = User(email=email, hashed_password=hashed_pw,name=name) 
     db.add(db_user)
     db.commit()
     db.refresh(db_user)

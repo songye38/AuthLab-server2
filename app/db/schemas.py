@@ -9,6 +9,7 @@ from pydantic import BaseModel, EmailStr
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    name: str  # ✅ 닉네임 추가!
 
 class UserOut(BaseModel):
     id: int

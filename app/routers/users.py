@@ -27,7 +27,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(models.User).filter(models.User.email == user.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="이미 가입된 이메일이에요.")
-    new_user = create_user(db, email=user.email, password=user.password)
+    new_user = create_user(db, email=user.email, password=user.password, name=user.name)
     return new_user
 
 
