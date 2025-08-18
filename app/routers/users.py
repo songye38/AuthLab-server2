@@ -257,4 +257,6 @@ async def google_callback(code: str, response: Response, db: Session = Depends(g
     )
 
     # 6. 프론트엔드로 리다이렉트
-    return RedirectResponse(url="/me?login=success")  # 프론트엔드 페이지로 보내줌
+    FRONTEND_URL = "https://auth-lab2.vercel.app/me?login=success"  # 실제 프론트 URL
+    return RedirectResponse(url=FRONTEND_URL)
+    #return RedirectResponse(url="/me?login=success")  # 프론트엔드 페이지로 보내줌
