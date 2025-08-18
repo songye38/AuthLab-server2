@@ -3,7 +3,7 @@ from fastapi import Depends
 from app.auth.auth import verify_access_token
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials,OAuth2PasswordBearer
-from app.auth.auth import verify_access_token, is_token_blacklisted
+from app.auth.auth import verify_access_token, is_token_blacklisted,create_access_token
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from app.db.database import get_db
@@ -13,8 +13,6 @@ from fastapi import Request, HTTPException, Depends, status
 from sqlalchemy.orm import Session
 from jose import jwt, JWTError
 from datetime import timedelta
-from . import models
-from .auth import SECRET_KEY, ALGORITHM, create_access_token, REFRESH_TOKEN_EXPIRE_DAYS
 
 
 
