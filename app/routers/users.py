@@ -109,7 +109,7 @@ def logout(response: Response):
 def read_users_me(current_user: models.User = Depends(get_current_user)):
     if not current_user:
         raise HTTPException(status_code=401, detail="인증된 사용자가 없습니다")
-    return {"email": current_user.email, "id": current_user.id}
+    return {"email": current_user.email, "id": current_user.id, "name": current_user.name}
 
 
 @router.get("/protected")
