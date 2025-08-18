@@ -105,11 +105,50 @@ def logout(response: Response):
     )
     return {"msg": "로그아웃 완료"}
 
+# @router.get("/me")
+# def read_users_me(current_user: models.User = Depends(get_current_user)):
+#     if not current_user:
+#         raise HTTPException(status_code=401, detail="인증된 사용자가 없습니다")
+#     return {"email": current_user.email, "id": current_user.id, "name": current_user.name}
+
+
+
+
 @router.get("/me")
-def read_users_me(current_user: models.User = Depends(get_current_user)):
+def read_users_me(
+    response: Response,
+    current_user: models.User = Depends(get_current_user)
+):
     if not current_user:
         raise HTTPException(status_code=401, detail="인증된 사용자가 없습니다")
-    return {"email": current_user.email, "id": current_user.id, "name": current_user.name}
+    
+    # 새 access_token 발급 (짧은 유효기간)
+    access_token = create_access_token(data={"sub": str(current_user.id)})
+
+    # 쿠키에도 세팅 (선택사항, 브라우저에서 httpOnly로 자동 사용 가능)
+    # response.set_cookie(
+    #     key="access_token",
+    #     value=access_token,
+    #     httponly=True,
+    #     secure=True,
+    #     samesite="none",
+    #     max_age=15 * 60,  # 15분
+    # )
+
+    # 사용자 정보와 access_token 같이 반환
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "name": current_user.name,
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
+
+
+
+
+
+
 
 
 @router.get("/protected")

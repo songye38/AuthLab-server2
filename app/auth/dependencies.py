@@ -1,3 +1,4 @@
+import os
 from fastapi import Depends
 from app.auth.auth import verify_access_token
 from fastapi import Depends, HTTPException, status
@@ -8,7 +9,12 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 import app.db.models as models
 from dotenv import load_dotenv
-import os
+from fastapi import Request, HTTPException, Depends, status
+from sqlalchemy.orm import Session
+from jose import jwt, JWTError
+from datetime import timedelta
+from . import models
+from .auth import SECRET_KEY, ALGORITHM, create_access_token, REFRESH_TOKEN_EXPIRE_DAYS
 
 
 
@@ -25,6 +31,32 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 # 만약 토큰이 블랙리스트에 있다면 예외를 발생시킵니다.
 from fastapi import Request
 
+# def get_current_user(request: Request, db: Session = Depends(get_db)):
+#     credentials_exception = HTTPException(
+#         status_code=status.HTTP_401_UNAUTHORIZED,
+#         detail="인증 실패",
+#         headers={"WWW-Authenticate": "Bearer"},
+#     )
+
+#     token = request.cookies.get("access_token")  # ✅ 쿠키에서 꺼냄
+#     print("서버가 받은 토큰:", token)  # 여기 꼭 찍어봐
+#     if not token:
+#         raise credentials_exception
+
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+#         user_id: str = payload.get("sub")
+#         if user_id is None:
+#             raise credentials_exception
+#     except JWTError:
+#         raise credentials_exception
+    
+#     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
+#     if user is None:
+#         raise credentials_exception
+#     return user
+
+
 def get_current_user(request: Request, db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -32,23 +64,43 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    token = request.cookies.get("access_token")  # ✅ 쿠키에서 꺼냄
-    print("서버가 받은 토큰:", token)  # 여기 꼭 찍어봐
-    if not token:
+    access_token = request.cookies.get("access_token")
+    refresh_token = request.cookies.get("refresh_token")
+
+    user_id = None
+
+    # 1️⃣ access_token 체크
+    if access_token:
+        try:
+            payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("sub")
+        except JWTError:
+            # access_token 만료 등 오류는 무시하고 refresh_token으로 시도
+            pass
+
+    # 2️⃣ access_token이 없거나 invalid 하면 refresh_token 체크
+    if not user_id and refresh_token:
+        try:
+            payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id = payload.get("sub")
+            if user_id is None:
+                raise credentials_exception
+            # 새로운 access_token 발급
+            new_access_token = create_access_token(data={"sub": str(user_id)}, expires_delta=timedelta(minutes=15))
+            # 응답 쿠키에 새 access_token 넣기
+            request.state.new_access_token = new_access_token  # FastAPI response에서는 middleware에서 처리 가능
+        except JWTError:
+            raise credentials_exception
+
+    if not user_id:
         raise credentials_exception
 
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
-    if user is None:
+    if not user:
         raise credentials_exception
+
     return user
+
 
 
 
