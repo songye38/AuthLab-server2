@@ -24,8 +24,7 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
 
-KAKAO_CLIENT_ID = os.getenv("KAKAO_CLIENT_ID")
-KAKAO_CLIENT_SECRET = os.getenv("KAKAO_CLIENT_SECRET")
+KAKAO_REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")
 KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI")
 
 
@@ -118,17 +117,94 @@ async def protected_route(user_id: str = Depends(verify_token)):
     return {"message": f"안녕하세요, {user_id}님! 인증된 사용자입니다."}
 
 
+
+
+
+
+
+
+
+# 🔹 카카오 로그인
+@router.get("/login/kakao")
+async def login_kakao():
+    return RedirectResponse(
+        f"https://kauth.kakao.com/oauth/authorize"
+        f"?response_type=code"
+        f"&client_id={KAKAO_REST_API_KEY}"
+        f"&redirect_uri={KAKAO_REDIRECT_URI}"
+    )
+
+
+
 # 🔹 구글 로그인 시작 (이미 네 코드 있음)
 @router.get("/login/google")
 async def login_google():
+    # 구글 OAuth2 인증 URL 생성
+    # 브라우저는 이 URL로 이동 → Google 로그인 화면 표시
+
     scope = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile"
     return RedirectResponse(
         f"https://accounts.google.com/o/oauth2/v2/auth"
         f"?response_type=code"
         f"&client_id={GOOGLE_CLIENT_ID}"
-        f"&redirect_uri={GOOGLE_REDIRECT_URI}"
+        f"&redirect_uri={GOOGLE_REDIRECT_URI}" #로그인에 성공하면 이 URL로 돌아옴
         f"&scope={scope}"
     )
+
+
+# 🔹 카카오 콜백
+@router.get("/oauth/kakao/callback")
+async def kakao_callback(code: str, response: Response, db: Session = Depends(get_db)):
+    # 1. code로 access_token 요청
+    token_url = "https://kauth.kakao.com/oauth/token"
+    token_data = {
+        "grant_type": "authorization_code",
+        "client_id": KAKAO_REST_API_KEY,
+        "redirect_uri": KAKAO_REDIRECT_URI,
+        "code": code,
+    }
+    token_res = requests.post(token_url, data=token_data)
+    if token_res.status_code != 200:
+        raise HTTPException(status_code=400, detail="카카오 토큰 요청 실패")
+    token_json = token_res.json()
+    kakao_access_token = token_json["access_token"]
+
+    # 2. 유저 정보 가져오기
+    userinfo_res = requests.get(
+        "https://kapi.kakao.com/v2/user/me",
+        headers={"Authorization": f"Bearer {kakao_access_token}"},
+    )
+    if userinfo_res.status_code != 200:
+        raise HTTPException(status_code=400, detail="카카오 사용자 정보 가져오기 실패")
+
+    userinfo = userinfo_res.json()
+    kakao_account = userinfo.get("kakao_account", {})
+    email = kakao_account.get("email")
+    name = kakao_account.get("profile", {}).get("nickname", "카카오유저")
+
+    # 3. DB 확인 (없으면 회원가입, 있으면 로그인)
+    db_user = get_user_by_email(db, email)
+    if not db_user:
+        db_user = create_user(db, email=email, password=None, name=name)
+
+    # 4. JWT 발급
+    access_token = create_access_token(data={"sub": str(db_user.id)})
+    refresh_token = create_refresh_token(data={"sub": str(db_user.id)})
+
+    # 5. 쿠키에 저장
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+    )
+
+    # 6. 프론트로 리다이렉트
+    return RedirectResponse(url="/me?login=success")
+
+
 
 
 # 🔹 구글 콜백 (여기서 code 받아 처리)
