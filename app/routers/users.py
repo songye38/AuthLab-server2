@@ -244,8 +244,10 @@ async def kakao_callback(code: str, response: Response, db: Session = Depends(ge
 
 
 # 🔹 구글 콜백 (여기서 code 받아 처리)
+from fastapi.responses import RedirectResponse
+
 @router.get("/oauth/google/callback")
-async def google_callback(code: str, response: Response, db: Session = Depends(get_db)):
+async def google_callback(code: str, db: Session = Depends(get_db)):
     # 1. 받은 code로 access_token 요청
     token_url = "https://oauth2.googleapis.com/token"
     token_data = {
@@ -256,8 +258,7 @@ async def google_callback(code: str, response: Response, db: Session = Depends(g
         "grant_type": "authorization_code",
     }
     token_res = requests.post(token_url, data=token_data)
-    if token_res.status_code != 200:
-        raise HTTPException(status_code=400, detail="구글 토큰 요청 실패")
+    token_res.raise_for_status()
     token_json = token_res.json()
     google_access_token = token_json["access_token"]
 
@@ -266,44 +267,33 @@ async def google_callback(code: str, response: Response, db: Session = Depends(g
         "https://www.googleapis.com/oauth2/v2/userinfo",
         headers={"Authorization": f"Bearer {google_access_token}"},
     )
-    if userinfo_res.status_code != 200:
-        raise HTTPException(status_code=400, detail="구글 사용자 정보 가져오기 실패")
-
+    userinfo_res.raise_for_status()
     userinfo = userinfo_res.json()
     email = userinfo.get("email")
     name = userinfo.get("name", "구글유저")
 
-    # 3. DB 확인 (없으면 회원가입, 있으면 그대로 로그인)
+    # 3. DB 확인 (없으면 회원가입)
     db_user = get_user_by_email(db, email)
     if not db_user:
-        db_user = create_user(db, email=email, password=None, name=name)  # 소셜로그인이라 패스워드는 None
+        db_user = create_user(db, email=email, password=None, name=name)
 
-    # 4. 우리 서비스용 JWT 토큰 발급
-    access_token = create_access_token(data={"sub": str(db_user.id)})
+    # 4. JWT 토큰 발급
+    # access_token = create_access_token(data={"sub": str(db_user.id)})
     refresh_token = create_refresh_token(data={"sub": str(db_user.id)})
 
-    redirect = RedirectResponse(url="https://auth-lab2.vercel.app/me?login=success")
+    # 5. RedirectResponse 객체에 쿠키 직접 세팅
+    FRONTEND_URL = "https://auth-lab2.vercel.app/me?login=success"
+    redirect = RedirectResponse(url=FRONTEND_URL)
     redirect.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,
-        samesite="none",
+        secure=True,         # HTTPS 필수
+        samesite="none",     # cross-site 허용
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
     )
+
+    # access_token은 프론트로 query string 혹은 localStorage에 따로 보내도 됨
+    # 예: redirect.url += f"&access_token={access_token}"
+
     return redirect
-
-    # # 5. 쿠키에 저장
-    # response.set_cookie(
-    #     key="refresh_token",
-    #     value=refresh_token,
-    #     httponly=True,
-    #     secure=True,
-    #     samesite="none",
-    #     max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-    # )
-
-    # # 6. 프론트엔드로 리다이렉트
-    # FRONTEND_URL = "https://auth-lab2.vercel.app/me?login=success"  # 실제 프론트 URL
-    # return RedirectResponse(url=FRONTEND_URL)
-    # #return RedirectResponse(url="/me?login=success")  # 프론트엔드 페이지로 보내줌
