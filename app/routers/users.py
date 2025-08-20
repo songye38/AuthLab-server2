@@ -65,6 +65,29 @@ async def login(user: UserLogin, response: Response, db: Session = Depends(get_d
     }
 
 
+# @router.post("/refresh")
+# def refresh_token(request: Request, response: Response, db: Session = Depends(get_db)):
+#     refresh_token = request.cookies.get("refresh_token") #쿠키에 있는 리프레시 토큰 정보 가져옴
+#     if not refresh_token:
+#         raise HTTPException(status_code=401, detail="리프레시 토큰 없음") #없으면 에러
+
+#     try:
+#         payload = jwt.decode(refresh_token, REFRESH_SECRET_KEY, algorithms=[ALGORITHM]) #유효성 확인
+#         user_id: str = payload.get("sub")
+#         if user_id is None:
+#             raise HTTPException(status_code=401, detail="리프레시 토큰 유효하지 않음")
+#     except JWTError:
+#         raise HTTPException(status_code=401, detail="리프레시 토큰 만료 또는 유효하지 않음")
+
+#     # 새 access_token 발급
+#     new_access_token = create_access_token(
+#         data={"sub": str(user_id)},
+#         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+#     )
+
+#     response.set_cookie("access_token", new_access_token, httponly=True, secure=True, samesite="none")
+#     return {"message": "access token 재발급 완료"}
+
 @router.post("/refresh")
 def refresh_token(request: Request, response: Response, db: Session = Depends(get_db)):
     refresh_token = request.cookies.get("refresh_token")
@@ -85,8 +108,10 @@ def refresh_token(request: Request, response: Response, db: Session = Depends(ge
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
-    response.set_cookie("access_token", new_access_token, httponly=True, secure=True, samesite="none")
-    return {"message": "access token 재발급 완료"}
+    # refresh_token은 쿠키에 그대로 두고
+    # access_token은 JSON 응답으로 내려줌
+    return {"access_token": new_access_token}
+
 
 
 @router.post("/logout")
@@ -105,50 +130,18 @@ def logout(response: Response):
     )
     return {"msg": "로그아웃 완료"}
 
-# @router.get("/me")
-# def read_users_me(current_user: models.User = Depends(get_current_user)):
-#     if not current_user:
-#         raise HTTPException(status_code=401, detail="인증된 사용자가 없습니다")
-#     return {"email": current_user.email, "id": current_user.id, "name": current_user.name}
-
-
-
-
 @router.get("/me")
 def read_users_me(
-    
-    response: Response,
     current_user: models.User = Depends(get_current_user)
 ):
-    print("요청을 일단 받음:")  # 여기 꼭 찍어봐
     if not current_user:
-        print("인증된 사용자 없음:")  # 여기 꼭 찍어봐
         raise HTTPException(status_code=401, detail="인증된 사용자가 없습니다")
-    
-    # 새 access_token 발급 (짧은 유효기간)
-    access_token = create_access_token(data={"sub": str(current_user.id)})
-    print("액세스 토큰 발급함:",access_token)  # 여기 꼭 찍어봐
 
-    # 쿠키에도 세팅 (선택사항, 브라우저에서 httpOnly로 자동 사용 가능)
-    # response.set_cookie(
-    #     key="access_token",
-    #     value=access_token,
-    #     httponly=True,
-    #     secure=True,
-    #     samesite="none",
-    #     max_age=15 * 60,  # 15분
-    # )
-
-    # 사용자 정보와 access_token 같이 반환
     return {
         "id": current_user.id,
         "email": current_user.email,
         "name": current_user.name,
-        "access_token": access_token,
-        "token_type": "bearer"
     }
-
-
 
 
 
