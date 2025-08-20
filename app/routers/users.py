@@ -259,20 +259,18 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
 
 
     # 4. JWT 토큰 발급
-    # access_token = create_access_token(data={"sub": str(db_user.id)})
-    print("리프레시 토큰 만들기 전 콘솔")
     refresh_token = create_refresh_token(data={"sub": str(db_user.id)})
     print("refresh_token:", refresh_token)
 
     # 5. RedirectResponse 객체에 쿠키 직접 세팅
-    FRONTEND_URL = "https://auth-lab2.vercel.app/me?login=success"
-    redirect = RedirectResponse(url=FRONTEND_URL)
+    redirect = RedirectResponse(url="https://songyeserver.info/me?login=success")
     redirect.set_cookie(
-         key="refresh_token",
+        key="refresh_token",
         value=refresh_token,
         httponly=True,
         secure=True,
-        samesite="none",
+        samesite="none",  # cross-site 쿠키 허용
+        domain="songyeserver.info",  # <- 여기 중요, 상위 도메인으로 쿠키 설정
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
     )
 
