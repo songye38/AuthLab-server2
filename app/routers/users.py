@@ -80,10 +80,7 @@ def refresh_token(request: Request, response: Response, db: Session = Depends(ge
         raise HTTPException(status_code=401, detail="리프레시 토큰 만료 또는 유효하지 않음")
 
     # 새 access_token 발급
-    new_access_token = create_access_token(
-        data={"sub": str(user_id)},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
+    new_access_token = create_access_token(data={"sub": str(user_id)})
 
     # refresh_token은 쿠키에 그대로 두고
     # access_token은 JSON 응답으로 내려줌
