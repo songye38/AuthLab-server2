@@ -261,6 +261,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
     # 4. JWT 토큰 발급
     # access_token = create_access_token(data={"sub": str(db_user.id)})
     refresh_token = create_refresh_token(data={"sub": str(db_user.id)})
+    print("refresh_token:", refresh_token)
 
     # 5. RedirectResponse 객체에 쿠키 직접 세팅
     FRONTEND_URL = "https://auth-lab2.vercel.app/me?login=success"
