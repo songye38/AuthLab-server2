@@ -260,6 +260,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
 
     # 4. JWT 토큰 발급
     # access_token = create_access_token(data={"sub": str(db_user.id)})
+    print("리프레시 토큰 만들기 전 콘솔")
     refresh_token = create_refresh_token(data={"sub": str(db_user.id)})
     print("refresh_token:", refresh_token)
 
