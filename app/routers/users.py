@@ -270,7 +270,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         httponly=True,
         secure=True,
         samesite="none",  # cross-site 쿠키 허용
-        domain="songyeserver.info",  # <- 여기 중요, 상위 도메인으로 쿠키 설정
+        domain=".songyeserver.info",  # <- 여기 중요, 상위 도메인으로 쿠키 설정
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
     )
 
