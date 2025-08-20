@@ -116,14 +116,18 @@ def logout(response: Response):
 
 @router.get("/me")
 def read_users_me(
+    
     response: Response,
     current_user: models.User = Depends(get_current_user)
 ):
+    print("요청을 일단 받음:")  # 여기 꼭 찍어봐
     if not current_user:
+        print("인증된 사용자 없음:")  # 여기 꼭 찍어봐
         raise HTTPException(status_code=401, detail="인증된 사용자가 없습니다")
     
     # 새 access_token 발급 (짧은 유효기간)
     access_token = create_access_token(data={"sub": str(current_user.id)})
+    print("액세스 토큰 발급함:",access_token)  # 여기 꼭 찍어봐
 
     # 쿠키에도 세팅 (선택사항, 브라우저에서 httpOnly로 자동 사용 가능)
     # response.set_cookie(
