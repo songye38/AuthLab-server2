@@ -255,7 +255,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         db_user = create_user(db, email=email, password=None, name=name)
 
 
-    print("구글 유저 정보:", db_user)
+    print("구글 유저 정보:", db_user.id)
 
 
     # 4. JWT 토큰 발급
