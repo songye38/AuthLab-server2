@@ -264,15 +264,22 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
 
     # 5. RedirectResponse 객체에 쿠키 직접 세팅
     redirect = RedirectResponse(url="https://songyeserver.info/me?login=success")
-    redirect.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=True,
-        samesite="none",  # cross-site 쿠키 허용
-        domain=".songyeserver.info",  # <- 여기 중요, 상위 도메인으로 쿠키 설정
-        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-    )
 
+    # 환경에 따라 쿠키 옵션 다르게 설정
+    cookie_params = {
+        "key": "refresh_token",
+        "value": refresh_token,
+        "httponly": True,
+        "max_age": REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+    }
+
+    # 배포 환경에서만 secure + samesite + domain 적용
+    cookie_params.update({
+        "secure": True,
+        "samesite": "none",
+        "domain": ".songyeserver.info",
+    })
+
+    redirect.set_cookie(**cookie_params)
 
     return redirect
