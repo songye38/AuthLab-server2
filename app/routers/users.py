@@ -65,29 +65,6 @@ async def login(user: UserLogin, response: Response, db: Session = Depends(get_d
     }
 
 
-# @router.post("/refresh")
-# def refresh_token(request: Request, response: Response, db: Session = Depends(get_db)):
-#     refresh_token = request.cookies.get("refresh_token") #쿠키에 있는 리프레시 토큰 정보 가져옴
-#     if not refresh_token:
-#         raise HTTPException(status_code=401, detail="리프레시 토큰 없음") #없으면 에러
-
-#     try:
-#         payload = jwt.decode(refresh_token, REFRESH_SECRET_KEY, algorithms=[ALGORITHM]) #유효성 확인
-#         user_id: str = payload.get("sub")
-#         if user_id is None:
-#             raise HTTPException(status_code=401, detail="리프레시 토큰 유효하지 않음")
-#     except JWTError:
-#         raise HTTPException(status_code=401, detail="리프레시 토큰 만료 또는 유효하지 않음")
-
-#     # 새 access_token 발급
-#     new_access_token = create_access_token(
-#         data={"sub": str(user_id)},
-#         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-#     )
-
-#     response.set_cookie("access_token", new_access_token, httponly=True, secure=True, samesite="none")
-#     return {"message": "access token 재발급 완료"}
-
 @router.post("/refresh")
 def refresh_token(request: Request, response: Response, db: Session = Depends(get_db)):
     refresh_token = request.cookies.get("refresh_token")
@@ -277,6 +254,10 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
     if not db_user:
         db_user = create_user(db, email=email, password=None, name=name)
 
+
+    print("구글 유저 정보:", db_user)
+
+
     # 4. JWT 토큰 발급
     # access_token = create_access_token(data={"sub": str(db_user.id)})
     refresh_token = create_refresh_token(data={"sub": str(db_user.id)})
@@ -285,15 +266,13 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
     FRONTEND_URL = "https://auth-lab2.vercel.app/me?login=success"
     redirect = RedirectResponse(url=FRONTEND_URL)
     redirect.set_cookie(
-        key="refresh_token",
+         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,         # HTTPS 필수
-        samesite="none",     # cross-site 허용
+        secure=True,
+        samesite="none",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
     )
 
-    # access_token은 프론트로 query string 혹은 localStorage에 따로 보내도 됨
-    # 예: redirect.url += f"&access_token={access_token}"
 
     return redirect
