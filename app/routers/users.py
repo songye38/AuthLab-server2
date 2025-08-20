@@ -282,8 +282,8 @@ async def google_callback(code: str, response: Response, db: Session = Depends(g
     access_token = create_access_token(data={"sub": str(db_user.id)})
     refresh_token = create_refresh_token(data={"sub": str(db_user.id)})
 
-    # 5. 쿠키에 저장
-    response.set_cookie(
+    redirect = RedirectResponse(url="https://auth-lab2.vercel.app/me?login=success")
+    redirect.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
@@ -291,8 +291,19 @@ async def google_callback(code: str, response: Response, db: Session = Depends(g
         samesite="none",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
     )
+    return redirect
 
-    # 6. 프론트엔드로 리다이렉트
-    FRONTEND_URL = "https://auth-lab2.vercel.app/me?login=success"  # 실제 프론트 URL
-    return RedirectResponse(url=FRONTEND_URL)
-    #return RedirectResponse(url="/me?login=success")  # 프론트엔드 페이지로 보내줌
+    # # 5. 쿠키에 저장
+    # response.set_cookie(
+    #     key="refresh_token",
+    #     value=refresh_token,
+    #     httponly=True,
+    #     secure=True,
+    #     samesite="none",
+    #     max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+    # )
+
+    # # 6. 프론트엔드로 리다이렉트
+    # FRONTEND_URL = "https://auth-lab2.vercel.app/me?login=success"  # 실제 프론트 URL
+    # return RedirectResponse(url=FRONTEND_URL)
+    # #return RedirectResponse(url="/me?login=success")  # 프론트엔드 페이지로 보내줌
