@@ -40,7 +40,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     return new_user
 
 
-@router.post("/login", response_model=TokenOut)
+@router.post("/login", response_model=UserOut)
 async def login(user: UserLogin, response: Response, db: Session = Depends(get_db)):
     db_user = get_user_by_email(db, user.email)
     if not db_user or not verify_password(user.password, db_user.hashed_password):
@@ -69,11 +69,7 @@ async def login(user: UserLogin, response: Response, db: Session = Depends(get_d
         domain=".songyeserver.info",
     )
 
-    return {
-        "id": db_user.id,
-        "email": db_user.email,
-        "name": db_user.name,
-    }
+    return db_user  # UserOut로 직렬화됨
 
 
 @router.post("/refresh")
