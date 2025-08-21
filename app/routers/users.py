@@ -90,18 +90,16 @@ def refresh_token(request: Request, response: Response, db: Session = Depends(ge
 
 @router.post("/logout")
 def logout(response: Response):
-    response.delete_cookie(
-        key="access_token",
-        path="/",
-        samesite="none",  # 있어도 되고 없어도 됨 (delete에는 영향 적음)
-        secure=True
-    )
-    response.delete_cookie(
-        key="refresh_token",
-        path="/",
-        samesite="none",  # 있어도 되고 없어도 됨 (delete에는 영향 적음)
-        secure=True
-    )
+    cookie_params = {
+        "path": "/",
+        "domain": ".songyeserver.info",
+        "secure": True,
+        "samesite": "none",
+    }
+
+    response.delete_cookie("access_token", **cookie_params)
+    response.delete_cookie("refresh_token", **cookie_params)
+
     return {"msg": "로그아웃 완료"}
 
 @router.get("/me")
