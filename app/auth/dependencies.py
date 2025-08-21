@@ -36,8 +36,17 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    token = request.cookies.get("access_token")  # ✅ 쿠키에서 꺼냄
-    print("서버가 받은 토큰:", token)  # 여기 꼭 찍어봐
+    token = None
+
+    # 1. 헤더 확인
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+
+    # 2. 없으면 쿠키 확인
+    if not token:
+        token = request.cookies.get("access_token")
+
     if not token:
         raise credentials_exception
 
