@@ -56,12 +56,23 @@ async def login(user: UserLogin, response: Response, db: Session = Depends(get_d
         secure=True,
         samesite="none",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        domain=".songyeserver.info",
+    )
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,  # 보안상 httponly 권장
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # access token은 보통 짧게 (예: 15~30분)
+        secure=True,
+        samesite="none",
+        domain=".songyeserver.info",
     )
 
     return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": db_user  # UserOut 모델과 매핑되어서 자동 변환됨
+        "id": db_user.id,
+        "email": db_user.email,
+        "name": db_user.name,
     }
 
 
