@@ -89,9 +89,20 @@ def refresh_token(request: Request, response: Response, db: Session = Depends(ge
     # 새 access_token 발급
     new_access_token = create_access_token(data={"sub": str(user_id)})
 
-    # refresh_token은 쿠키에 그대로 두고
-    # access_token은 JSON 응답으로 내려줌
-    return {"access_token": new_access_token}
+    # access_token을 HttpOnly 쿠키로 설정
+    response.set_cookie(
+        key="access_token",
+        value=new_access_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        domain=".songyeserver.info",
+    )
+
+    # 클라이언트에서는 JSON 응답을 굳이 안 써도 되지만, user 정보 정도는 내려줄 수 있음
+    return {"message": "Access token refreshed"}
+
 
 
 
