@@ -120,15 +120,9 @@ def read_users_me(
 
 
 
-
-
 @router.get("/protected")
 async def protected_route(user_id: str = Depends(verify_token)):
     return {"message": f"안녕하세요, {user_id}님! 인증된 사용자입니다."}
-
-
-
-
 
 
 
@@ -256,6 +250,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
 
 
     # 4. JWT 토큰 발급
+    access_token = create_access_token(data={"sub": str(db_user.id)})
     refresh_token = create_refresh_token(data={"sub": str(db_user.id)})
     print("refresh_token:", refresh_token)
 
@@ -263,20 +258,25 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
     redirect = RedirectResponse(url="https://songyeserver.info/me?login=success")
 
     # 환경에 따라 쿠키 옵션 다르게 설정
-    cookie_params = {
-        "key": "refresh_token",
-        "value": refresh_token,
-        "httponly": True,
-        "max_age": REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-    }
+    # refresh_token 쿠키
+    redirect.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        secure=True,
+        samesite="none",
+        domain=".songyeserver.info",
+    )
 
-    # 배포 환경에서만 secure + samesite + domain 적용
-    cookie_params.update({
-        "secure": True,
-        "samesite": "none",
-        "domain": ".songyeserver.info",
-    })
-
-    redirect.set_cookie(**cookie_params)
-
+    # access_token 쿠키
+    redirect.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,  # 보안상 httponly 권장
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # access token은 보통 짧게 (예: 15~30분)
+        secure=True,
+        samesite="none",
+        domain=".songyeserver.info",
+    )
     return redirect
